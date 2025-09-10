@@ -204,6 +204,11 @@
     // DOM elements
     const form = document.getElementById('shiftForm');
     const loomInput = document.getElementById('loom');
+    const shiftSelect = document.getElementById('shift');
+    const dateInput = document.getElementById('date');
+    const productionInput = document.getElementById('production');
+    const effInput = document.getElementById('eff');
+    const noteInput = document.getElementById('note');
     const loomList = document.getElementById('loomList');
     const loomInfo = document.getElementById('loomInfo');
     const buyerInfo = document.getElementById('buyerInfo');
@@ -215,7 +220,7 @@
     const themeToggle = document.getElementById('themeToggle');
     
     // Initialize date to today
-    document.getElementById('date').valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
+    dateInput.valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
     
     // Theme toggle functionality
     themeToggle.addEventListener('click', () => {
@@ -359,7 +364,7 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       
-      const loom = form.loom.value.trim();
+      const loom = loomInput.value.trim();
       if (!loom) {
         showToast('Please enter a loom number', 'error');
         return;
@@ -381,18 +386,17 @@
     });
     
     function submitEntry() {
-      const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
       submitBtn.classList.add('opacity-75');
       
       const data = {
-        shift: form.shift.value,
-        date: form.date.value,
-        loom: form.loom.value.trim(),
-        production: Number(form.production.value),
-        eff: Number(form.eff.value),
-        note: form.note.value.trim(),
+        shift: shiftSelect.value,
+        date: dateInput.value,
+        loom: loomInput.value.trim(),
+        production: Number(productionInput.value),
+        eff: Number(effInput.value),
+        note: noteInput.value.trim(),
         timestamp: Date.now()
       };
       
@@ -402,7 +406,7 @@
         .then(() => {
           showToast('Entry submitted successfully!', 'success');
           form.reset();
-          document.getElementById('date').valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
+          dateInput.valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
           loomInfo.classList.add('hidden');
         })
         .catch((error) => {
@@ -418,7 +422,7 @@
     // Reset form
     resetBtn.addEventListener('click', () => {
       form.reset();
-      document.getElementById('date').valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
+      dateInput.valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
       loomInfo.classList.add('hidden');
     });
     
