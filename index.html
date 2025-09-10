@@ -155,7 +155,7 @@
 
     <!-- Recent Entries Card -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 transition-colors">
-      <h2 class="text-xl font-bold mb-4 dark:text-white">Recent Entries</h2>
+      <h2 class="text-xl font-bold mb-4 dark:text-white">Recent Entries - <span id="currentShiftDisplay">All Shifts</span></h2>
       
       <div id="totalProduction" class="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800/50 mb-5 flex justify-between items-center transition-colors">
         <div class="font-medium text-green-800 dark:text-green-200">Total Production:</div>
@@ -177,7 +177,7 @@
           </thead>
           <tbody id="entriesList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             <tr>
-              <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Loading entries...</td>
+              <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Select a shift to view entries</td>
             </tr>
           </tbody>
         </table>
@@ -218,6 +218,7 @@
     const resetBtn = document.getElementById('resetBtn');
     const submitBtn = document.getElementById('submitBtn');
     const themeToggle = document.getElementById('themeToggle');
+    const currentShiftDisplay = document.getElementById('currentShiftDisplay');
     
     // Initialize date to today
     dateInput.valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
@@ -296,11 +297,25 @@
       return total;
     }
     
-    // Load user's entries
-    function loadUserEntries() {
-      // In a real app, you would identify the user
-      // For demo purposes, we'll just show all entries
-      database.ref('entries').orderByChild('timestamp').limitToLast(10).once('value')
+    // Load entries based on selected shift
+    function loadEntriesForSelectedShift() {
+      const selectedShift = shiftSelect.value;
+      
+      if (!selectedShift) {
+        currentShiftDisplay.textContent = 'All Shifts';
+        entriesList.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">Select a shift to view entries</td></tr>';
+        totalProductionValue.textContent = '0';
+        return;
+      }
+      
+      currentShiftDisplay.textContent = `Shift ${selectedShift}`;
+      
+      // Query Firebase for entries with the selected shift
+      database.ref('entries')
+        .orderByChild('shift')
+        .equalTo(selectedShift)
+        .limitToLast(10)
+        .once('value')
         .then((snapshot) => {
           const entries = snapshot.val();
           renderEntries(entries);
@@ -321,7 +336,7 @@
     // Render entries list
     function renderEntries(entries) {
       if (!entries || Object.keys(entries).length === 0) {
-        entriesList.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No entries yet.</td></tr>';
+        entriesList.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">No entries for this shift yet.</td></tr>';
         return;
       }
       
@@ -351,7 +366,7 @@
             </span>
           </td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${escapeHtml(entry.loom)}</td>
-          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-medium">${entry.production}m</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-90 dark:text-white font-medium">${entry.production}m</td>
           <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">${entry.eff}%</td>
           <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">${entry.note ? escapeHtml(entry.note) : '-'}</td>
         `;
@@ -408,6 +423,9 @@
           form.reset();
           dateInput.valueAsNumber = Date.now() - (new Date()).getTimezoneOffset() * 60000;
           loomInfo.classList.add('hidden');
+          
+          // Reload entries for the current shift after submission
+          loadEntriesForSelectedShift();
         })
         .catch((error) => {
           showToast('Error submitting entry: ' + error.message, 'error');
@@ -451,14 +469,35 @@
     
     // Initialize
     loadLoomData();
-    loadUserEntries();
     
-    // Real-time updates for entries
-    database.ref('entries').orderByChild('timestamp').limitToLast(10).on('value', (snapshot) => {
-      const entries = snapshot.val();
-      renderEntries(entries);
-      updateTotalProduction(entries);
-    });
+    // Add event listener to shift select to load entries when shift changes
+    shiftSelect.addEventListener('change', loadEntriesForSelectedShift);
+    
+    // Real-time updates for entries of the selected shift
+    function setupRealtimeListener() {
+      // Remove any existing listeners
+      database.ref('entries').off();
+      
+      const selectedShift = shiftSelect.value;
+      
+      if (!selectedShift) {
+        return;
+      }
+      
+      // Set up real-time listener for the selected shift
+      database.ref('entries')
+        .orderByChild('shift')
+        .equalTo(selectedShift)
+        .limitToLast(10)
+        .on('value', (snapshot) => {
+          const entries = snapshot.val();
+          renderEntries(entries);
+          updateTotalProduction(entries);
+        });
+    }
+    
+    // Update real-time listener when shift changes
+    shiftSelect.addEventListener('change', setupRealtimeListener);
   </script>
 </body>
 </html>
